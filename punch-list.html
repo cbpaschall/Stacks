@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Punch List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..600&display=swap" rel="stylesheet">
+<style>
+  /* ---- Punch List ------------------------------------------------------ */
+  .pl {
+    --pl-bg:        #FAF5EC;
+    --pl-surface:   #FFFDF8;
+    --pl-surface-2: #F5EFE3;
+    --pl-border:    #E3D9C6;
+    --pl-border-2:  #E7DECD;
+    --pl-ink:       #2E2A24;
+    --pl-muted:     #8A7F6D;
+    --pl-faint:     #A2977F;
+    --pl-accent:    #B4553A;
+    --pl-tag-bg:    #F0E7D6;
+    --pl-tag-ink:   #8E6C4A;
+    font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: var(--pl-bg);
+    color: var(--pl-ink);
+    box-sizing: border-box;
+  }
+  .pl *, .pl *::before, .pl *::after { box-sizing: inherit; }
+  .pl input, .pl textarea, .pl button { font: inherit; color: inherit; }
+  .pl input:focus, .pl textarea:focus, .pl button:focus { outline: none; }
+  .pl ::placeholder { color: #A99E8C; }
+
+  .pl-page   { min-height: 100vh; padding: 72px 24px 96px; display: flex; justify-content: center; }
+  .pl-shell  { width: 100%; max-width: 620px; }
+
+  .pl-head   { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+  .pl-title  { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; letter-spacing: -.025em; }
+  .pl-count  { font-size: 14px; font-weight: 600; color: var(--pl-muted); }
+
+  .pl-add        { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
+  .pl-add-field  { flex: 1; border-bottom: 1.5px solid #D9CFBC; padding: 0 2px 10px; }
+  .pl-add-input  { width: 100%; border: none; background: transparent; font-size: 17px; padding: 0; }
+  .pl-add-btn    { width: 44px; height: 44px; flex: none; border: none; border-radius: 10px; background: var(--pl-ink);
+                   color: var(--pl-bg); font-size: 22px; line-height: 1; cursor: pointer; display: flex;
+                   align-items: center; justify-content: center; transition: transform .12s ease, background .15s ease; }
+  .pl-add-btn:hover  { background: #453F35; transform: translateY(-1px); }
+  .pl-add-btn:active { transform: translateY(0); }
+
+  .pl-filters   { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+  .pl-filters:empty { display: none; }
+  .pl-chip      { border: 1px solid #DFD5C2; background: transparent; color: var(--pl-muted); border-radius: 999px;
+                  padding: 5px 12px; font-size: 12.5px; font-weight: 600; letter-spacing: .02em; cursor: pointer;
+                  transition: all .14s ease; }
+  .pl-chip:hover      { border-color: #C9BEA8; color: var(--pl-ink); }
+  .pl-chip[aria-pressed="true"] { background: var(--pl-ink); border-color: var(--pl-ink); color: var(--pl-bg); }
+
+  .pl-list  { display: flex; flex-direction: column; gap: 10px; }
+  .pl-item  { border: 1.5px solid var(--pl-border); background: var(--pl-surface); border-radius: 14px;
+              transition: border-color .18s ease, background .18s ease; animation: pl-in .18s ease; }
+  .pl-item.is-done { background: var(--pl-surface-2); border-color: var(--pl-border-2); }
+  @keyframes pl-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+  .pl-row      { display: flex; align-items: center; gap: 14px; padding: 16px 16px 16px 18px; }
+  .pl-box      { width: 24px; height: 24px; flex: none; border-radius: 5px; border: 1.75px solid #C4B9A4;
+                 background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;
+                 padding: 0; transition: all .15s ease; }
+  .pl-box:hover { border-color: #A2977F; }
+  .pl-box svg  { display: none; }
+  .pl-item.is-done .pl-box { background: var(--pl-ink); border-color: var(--pl-ink); }
+  .pl-item.is-done .pl-box svg { display: block; }
+
+  .pl-body     { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .pl-line     { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pl-text     { font-size: 16px; }
+  .pl-item.is-done .pl-text { color: var(--pl-faint); text-decoration: line-through; text-decoration-color: #B0A692; }
+  .pl-tag      { font-size: 11.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase;
+                 color: var(--pl-tag-ink); background: var(--pl-tag-bg); border-radius: 4px; padding: 3px 7px; }
+  .pl-meta     { font-size: 12.5px; color: #9A907E; }
+  .pl-meta:empty { display: none; }
+
+  .pl-icon     { width: 30px; height: 30px; flex: none; border: none; background: transparent; cursor: pointer;
+                 color: #A0957F; display: flex; align-items: center; justify-content: center; padding: 0;
+                 transition: color .15s ease; }
+  .pl-icon:hover        { color: var(--pl-ink); }
+  .pl-icon.pl-del:hover { color: var(--pl-accent); }
+  .pl-icon svg { transition: transform .18s ease; }
+  .pl-item.is-open .pl-expand svg { transform: rotate(180deg); }
+
+  .pl-detail   { display: none; border-top: 1px solid var(--pl-border-2); padding: 16px 18px 18px 56px;
+                 flex-direction: column; gap: 14px; }
+  .pl-item.is-open .pl-detail { display: flex; }
+  .pl-notes    { width: 100%; border: none; background: transparent; resize: vertical; font-size: 14.5px;
+                 line-height: 1.55; color: #4A4238; padding: 0; }
+  .pl-subs     { display: flex; flex-direction: column; gap: 9px; }
+  .pl-sub      { display: flex; align-items: center; gap: 11px; }
+  .pl-sub-box  { width: 17px; height: 17px; flex: none; border-radius: 4px; border: 1.6px solid #C4B9A4;
+                 background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;
+                 padding: 0; transition: all .15s ease; }
+  .pl-sub-box svg { display: none; }
+  .pl-sub.is-done .pl-sub-box     { background: var(--pl-ink); border-color: var(--pl-ink); }
+  .pl-sub.is-done .pl-sub-box svg { display: block; }
+  .pl-sub-text { flex: 1; font-size: 14.5px; color: #4A4238; }
+  .pl-sub.is-done .pl-sub-text { color: var(--pl-faint); text-decoration: line-through; }
+  .pl-sub-del  { border: none; background: transparent; color: #B5AB97; cursor: pointer; font-size: 13px; padding: 2px 4px; }
+  .pl-sub-del:hover { color: var(--pl-accent); }
+  .pl-sub-add  { border: none; background: transparent; font-size: 14.5px; padding: 2px 0 0 28px; }
+
+  .pl-empty    { display: none; border: 1.5px dashed #DFD5C2; border-radius: 14px; padding: 34px 20px;
+                 text-align: center; color: var(--pl-faint); font-size: 15px; }
+  .pl.is-empty .pl-empty { display: block; }
+
+  .pl-foot     { margin-top: 36px; border-top: 1px solid var(--pl-border-2); padding-top: 20px;
+                 display: flex; flex-direction: column; gap: 12px; }
+  .pl-foot-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .pl-remain   { font-size: 14px; font-style: italic; font-weight: 600; }
+  .pl-clear    { border: none; background: transparent; color: #9A907E; font-size: 13px; cursor: pointer; padding: 0;
+                 text-decoration: underline; text-underline-offset: 3px; }
+  .pl-clear:hover  { color: var(--pl-accent); }
+  .pl-clear[hidden] { display: none; }
+  .pl-quote    { cursor: pointer; max-width: 520px; }
+  .pl-quote-t  { font-size: 15px; line-height: 1.5; font-style: italic; color: var(--pl-muted); text-wrap: pretty; }
+  .pl-quote-a  { font-size: 13px; color: #A99E8C; margin-top: 5px; }
+
+  @media (max-width: 560px) {
+    .pl-page  { padding: 40px 16px 64px; }
+    .pl-title { font-size: 32px; }
+    .pl-detail { padding-left: 20px; }
+  }
+</style>
+</head>
+<body style="margin:0">
+
+<!-- ===== Punch List markup ===== -->
+<div class="pl" id="punch-list">
+  <div class="pl-page">
+    <div class="pl-shell">
+
+      <div class="pl-head">
+        <h1 class="pl-title">Punch List</h1>
+        <div class="pl-count" data-pl="count">0 left</div>
+      </div>
+
+      <div class="pl-add">
+        <div class="pl-add-field">
+          <input class="pl-add-input" data-pl="input" placeholder="Add new task — use #tag to label it" autocomplete="off">
+        </div>
+        <button class="pl-add-btn" data-pl="add" title="Add task" aria-label="Add task">+</button>
+      </div>
+
+      <div class="pl-filters" data-pl="filters"></div>
+
+      <div class="pl-list" data-pl="list"></div>
+
+      <div class="pl-empty">Nothing on the list. Add the first thing above.</div>
+
+      <div class="pl-foot">
+        <div class="pl-foot-top">
+          <div class="pl-remain" data-pl="remaining">Your remaining todos : 0</div>
+          <button class="pl-clear" data-pl="clear" hidden>Clear completed</button>
+        </div>
+        <div class="pl-quote" data-pl="quote" title="Next quote">
+          <div class="pl-quote-t" data-pl="quote-text"></div>
+          <div class="pl-quote-a" data-pl="quote-attr"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SPORTS = [
+    ["You miss 100% of the shots you don't take.", "Wayne Gretzky"],
+    ["It ain't over till it's over.", "Yogi Berra"],
+    ["Hard work beats talent when talent doesn't work hard.", "Tim Notke"],
+    ["I've failed over and over and over again in my life. And that is why I succeed.", "Michael Jordan"],
+    ["It's not whether you get knocked down; it's whether you get up.", "Vince Lombardi"],
+    ["The more difficult the victory, the greater the happiness in winning.", "Pelé"],
+    ["Champions keep playing until they get it right.", "Billie Jean King"],
+    ["You have to expect things of yourself before you can do them.", "Michael Jordan"]
+  ];
+  const MOVIES = [
+    ["Do, or do not. There is no try.", "Yoda, The Empire Strikes Back"],
+    ["Get busy living, or get busy dying.", "The Shawshank Redemption"],
+    ["Just keep swimming.", "Finding Nemo"],
+    ["It's not about how hard you hit. It's about how hard you can get hit and keep moving forward.", "Rocky Balboa"],
+    ["Why do we fall? So we can learn to pick ourselves up.", "Batman Begins"],
+    ["Today is the day. Today is the day.", "Cool Runnings"],
+    ["Life moves pretty fast.", "Ferris Bueller's Day Off"],
+    ["There's no crying in baseball!", "A League of Their Own"]
+  ];
+  const QUOTES = SPORTS.concat(MOVIES);
+
+  const CHECK = '<svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L4.8 8.6L12 1.4" stroke="#FAF5EC" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CHECK_SM = '<svg width="10" height="8" viewBox="0 0 13 10" fill="none"><path d="M1 5L4.8 8.6L12 1.4" stroke="#FAF5EC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CHEVRON = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5.5L7 9.5L11 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CROSS = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+
+  const root = document.getElementById("punch-list");
+  if (!root) return;
+  const el = n => root.querySelector('[data-pl="' + n + '"]');
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const STORE = "punchlist.v1";
+  let uid = 100, filter = null, qi = Math.floor(Math.random() * QUOTES.length);
+
+  const SEED = [
+    { text: "Patch and sand the hallway drywall", tags: ["house"], notes: "Two spots by the light switch.",
+      subtasks: [{ text: "Buy joint compound", done: true }, { text: "Sand at 120 grit", done: false }] },
+    { text: "Send the Q3 numbers to Dana", tags: ["work"] },
+    { text: "Book the dentist" },
+    { text: "Replace the porch light bulb", tags: ["house"], done: true }
+  ];
+
+  const norm = t => ({
+    id: t.id || ++uid, text: t.text, done: !!t.done, tags: t.tags || [], notes: t.notes || "",
+    open: false, subtasks: (t.subtasks || []).map(s => ({ id: s.id || ++uid, text: s.text, done: !!s.done }))
+  });
+
+  let tasks;
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE));
+    tasks = Array.isArray(saved) ? saved.map(norm) : SEED.map(norm);
+  } catch (e) { tasks = SEED.map(norm); }
+  tasks.forEach(t => { uid = Math.max(uid, t.id); t.subtasks.forEach(s => uid = Math.max(uid, s.id)); });
+
+  const save = () => { try { localStorage.setItem(STORE, JSON.stringify(tasks)); } catch (e) {} };
+  const find = id => tasks.find(t => t.id === +id);
+
+  function render() {
+    const remaining = tasks.filter(t => !t.done).length;
+    el("count").textContent = remaining + " left";
+    el("remaining").textContent = "Your remaining todos : " + remaining;
+    el("clear").hidden = !tasks.some(t => t.done);
+
+    const tags = [];
+    tasks.forEach(t => t.tags.forEach(g => { if (!tags.includes(g)) tags.push(g); }));
+    if (filter && !tags.includes(filter)) filter = null;
+    el("filters").innerHTML = tags.map(g =>
+      '<button class="pl-chip" data-tag="' + esc(g) + '" aria-pressed="' + (filter === g) + '">#' + esc(g) + '</button>'
+    ).join("");
+
+    const visible = tasks
+      .filter(t => !filter || t.tags.includes(filter))
+      .slice()
+      .sort((a, b) => a.done === b.done ? 0 : (a.done ? 1 : -1));
+
+    root.classList.toggle("is-empty", visible.length === 0);
+
+    el("list").innerHTML = visible.map(t => {
+      const bits = [];
+      if (t.subtasks.length) bits.push(t.subtasks.filter(s => s.done).length + "/" + t.subtasks.length + " subtasks");
+      if (t.notes.trim() && !t.open) bits.push(t.notes.trim().split("\n")[0].slice(0, 60));
+      return '' +
+      '<div class="pl-item' + (t.done ? " is-done" : "") + (t.open ? " is-open" : "") + '" data-id="' + t.id + '">' +
+        '<div class="pl-row">' +
+          '<button class="pl-box" data-act="toggle" aria-label="Toggle done">' + CHECK + '</button>' +
+          '<div class="pl-body">' +
+            '<div class="pl-line">' +
+              '<span class="pl-text">' + esc(t.text) + '</span>' +
+              t.tags.map(g => '<span class="pl-tag">' + esc(g) + '</span>').join("") +
+            '</div>' +
+            '<div class="pl-meta">' + esc(bits.join("  ·  ")) + '</div>' +
+          '</div>' +
+          '<button class="pl-icon pl-expand" data-act="expand" aria-label="Details">' + CHEVRON + '</button>' +
+          '<button class="pl-icon pl-del" data-act="remove" aria-label="Delete">' + CROSS + '</button>' +
+        '</div>' +
+        '<div class="pl-detail">' +
+          '<textarea class="pl-notes" data-act="notes" rows="2" placeholder="Notes">' + esc(t.notes) + '</textarea>' +
+          '<div class="pl-subs">' +
+            t.subtasks.map(s =>
+              '<div class="pl-sub' + (s.done ? " is-done" : "") + '" data-sid="' + s.id + '">' +
+                '<button class="pl-sub-box" data-act="sub-toggle">' + CHECK_SM + '</button>' +
+                '<span class="pl-sub-text">' + esc(s.text) + '</span>' +
+                '<button class="pl-sub-del" data-act="sub-remove" aria-label="Delete subtask">✕</button>' +
+              '</div>'
+            ).join("") +
+            '<input class="pl-sub-add" data-act="sub-add" placeholder="+ Add subtask" autocomplete="off">' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function renderQuote() {
+    const q = QUOTES[qi % QUOTES.length];
+    el("quote-text").textContent = '"' + q[0] + '"';
+    el("quote-attr").textContent = "— " + q[1];
+  }
+
+  function add() {
+    const raw = el("input").value.trim();
+    if (!raw) return;
+    const tags = (raw.match(/#[\w-]+/g) || []).map(t => t.slice(1));
+    const text = raw.replace(/#[\w-]+/g, "").replace(/\s+/g, " ").trim();
+    if (!text) return;
+    tasks.unshift(norm({ text: text, tags: tags }));
+    el("input").value = "";
+    save(); render();
+  }
+
+  el("add").addEventListener("click", add);
+  el("input").addEventListener("keydown", e => { if (e.key === "Enter") add(); });
+  el("clear").addEventListener("click", () => { tasks = tasks.filter(t => !t.done); save(); render(); });
+  el("quote").addEventListener("click", () => { qi++; renderQuote(); });
+  el("filters").addEventListener("click", e => {
+    const chip = e.target.closest("[data-tag]");
+    if (!chip) return;
+    filter = filter === chip.dataset.tag ? null : chip.dataset.tag;
+    render();
+  });
+
+  el("list").addEventListener("click", e => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn) return;
+    const item = btn.closest(".pl-item");
+    const t = find(item.dataset.id);
+    const act = btn.dataset.act;
+    if (act === "toggle")      { t.done = !t.done; }
+    else if (act === "expand") { t.open = !t.open; }
+    else if (act === "remove") { tasks = tasks.filter(x => x !== t); }
+    else if (act === "sub-toggle" || act === "sub-remove") {
+      const sid = +btn.closest(".pl-sub").dataset.sid;
+      if (act === "sub-toggle") { const s = t.subtasks.find(x => x.id === sid); s.done = !s.done; }
+      else t.subtasks = t.subtasks.filter(x => x.id !== sid);
+    } else return;
+    save(); render();
+  });
+
+  el("list").addEventListener("input", e => {
+    if (e.target.dataset.act !== "notes") return;
+    find(e.target.closest(".pl-item").dataset.id).notes = e.target.value;
+    save();
+  });
+
+  el("list").addEventListener("keydown", e => {
+    if (e.target.dataset.act !== "sub-add" || e.key !== "Enter") return;
+    const v = e.target.value.trim();
+    if (!v) return;
+    find(e.target.closest(".pl-item").dataset.id).subtasks.push({ id: ++uid, text: v, done: false });
+    save(); render();
+  });
+
+  setInterval(() => { qi++; renderQuote(); }, 14000);
+  render(); renderQuote();
+})();
+</script>
+
+</body>
+</html>
